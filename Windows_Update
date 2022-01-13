@@ -1,0 +1,15 @@
+
+#To start a remote PS session to another PC, enter the following:
+Enter-PSSession -ComputerName MITUTOYO-PC -Credential fuller.admin
+
+#If PC is set to block scripts, enter:
+Set-ExecutionPolicy RemoteSigned
+
+#The PS environment may not have the Windows update modules installed:
+Install-Module PSWindowsUpdate -AcceptAll
+
+Import-Module PSWindowsUpdate
+
+Add-WUServiceManager -MicrosoftUpdate
+
+Install-WindowsUpdate -MicrosoftUpdate -AcceptAll
