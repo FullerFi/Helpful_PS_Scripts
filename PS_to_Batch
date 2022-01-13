@@ -19,3 +19,4 @@ function Convert-PowerShellToBatch
  
 Get-ChildItem -Path C:\path\to\powershell\scripts -Filter *.ps1 |
   Convert-PowerShellToBatch
+
