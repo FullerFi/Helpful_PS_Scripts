@@ -1,15 +1,94 @@
 
-#To start a remote PS session to another PC, enter the following:
+# To start a remote PS session to another PC, enter the following:
 Enter-PSSession -ComputerName MITUTOYO-PC -Credential fuller.admin
 
-#If PC is set to block scripts, enter:
+# If PC is set to block scripts, enter:
 Set-ExecutionPolicy RemoteSigned
 
-#The PS environment may not have the Windows update modules installed:
-Install-Module PSWindowsUpdate -AcceptAll
+# PSWindowsUpdate is not installed by default on Windows. Run this to install the module:
+Install-Module PSWindowsUpdate -MaximumVersion 1.5.2.6
 
 Import-Module PSWindowsUpdate
 
+# Show commands for PSWindowsUpdate:
+Get-Command -Module PSWindowsUpdate
+
 Add-WUServiceManager -MicrosoftUpdate
 
+# Install the updates:
 Install-WindowsUpdate -MicrosoftUpdate -AcceptAll
+# -AutoReboot
+
+
+######### MORE OPTIONS/TROUBLESHOOTING STEPS #########
+
+
+# List and display the latest updates installed:
+gwmi win32_quickfixengineering | sort installedon -desc
+
+# Check if the system allows script execution:
+Get-ExecutionPolicy
+
+# Extend Windows Update functions:
+Import-Module PSWindowsUpdate
+
+# List needed updates:
+Get-WUlist
+
+
+####################################
+
+
+# Enable Windows Update service and switch to Automatic/Running (REMOTE PC):
+$Cred = Get-Credential -Credential fuller.admin
+$S = Get-Service -Name wuauserv
+    Invoke-Command -ComputerName cell-5 -Credential $Cred -ScriptBlock {
+    Set-Service -InputObject $S -StartupType Automatic -Status Running
+    }
+
+
+# Enable Windows Update service and switch to Automatic/Running (LOCAL MACHINE):
+Set-Service -Name wuauserv -StartupType Automatic -Status Running
+
+# Print the status to confirm
+Get-Service wuauserv | Select-Object -Property Name, StartType, Status
+
+
+##############
+
+
+# Install NuGet (install manager):
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.208 -Force
+
+
+Invoke-WUInstall -ComputerName <PC_name> -Script {ipmo PSWindowsUpdate; Get-WUInstall -AcceptAll | Out-File C:\PSWindowsUpdate.log }
+
+
+# Check the list of available updates on a remote computer:
+Get-WUList -ComputerName <PC_name>
+
+# Previously installed updates list:
+Get-WUHistory
+
+# Download updates but don't install:
+Download-WindowsUpdate
+
+
+
+
+
+
+
+Get-CimInstance win32_service | Where-Object Name -eq wuauserv
+
+
+################################
+
+Get-Command -Module PSWindowsUpdate
+
+Install-WindowsUpdate
+
+
+
+
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
