@@ -1,4 +1,10 @@
 
+cd %ProgramFiles%\Windows Defender
+MpCmdRun.exe -removedefinitions -dynamicsignatures
+MpCmdRun.exe -SignatureUpdate
+
+################
+
 # To start a remote PS session to another PC, enter the following:
 Enter-PSSession -ComputerName <PC_name> -Credential <username>
 
