@@ -4,6 +4,7 @@ wusa.exe <file path> /quiet /norestart
 
 ################
 
+# Security intelligence updates for Microsoft Defender Antivirus and other Microsoft antimalware
 cd '.\Program Files\Windows Defender'
 .\MpCmdRun.exe -removedefinitions -dynamicsignatures
 .\MpCmdRun.exe -SignatureUpdate
