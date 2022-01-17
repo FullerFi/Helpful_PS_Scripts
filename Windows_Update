@@ -1,7 +1,12 @@
+wusa.exe <file path> /quiet /norestart
+# /quiet = runs without user interaction. The computer restarts if this is required.
+# /uninstall = use with update title or KB number (wusa.exe /uninstall /KB5009454)
 
-cd %ProgramFiles%\Windows Defender
-MpCmdRun.exe -removedefinitions -dynamicsignatures
-MpCmdRun.exe -SignatureUpdate
+################
+
+cd '.\Program Files\Windows Defender'
+.\MpCmdRun.exe -removedefinitions -dynamicsignatures
+.\MpCmdRun.exe -SignatureUpdate
 
 ################
 
