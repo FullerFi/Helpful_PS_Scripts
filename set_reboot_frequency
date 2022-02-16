@@ -1,0 +1,37 @@
+
+
+# Set the PowerShell variables
+$Global:RestartDuration = 5 #System reboots every 5 days
+$Global:OrganizationName = "WWW.VIVEKRR.COM"
+$Global:DayBefore = $RestartDuration - 1
+
+
+# Get the last system reboot info
+$computerOS = Get-CimInstance CIM_OperatingSystem
+$lastreboot=$computerOS.LastBootUpTime.ToString("yyy-MM-dd")
+$today=(get-date).ToString("yyy-MM-dd")
+$TimeSpan = [DateTime]$today - [DateTime]$lastreboot;
+$TimeSpan.Days
+
+
+# Define the logics of restart based in the last reboot
+if($days -eq 0)
+{
+    Write-Host "No Action"
+}
+elseif ($Days -eq $DayBefore) 
+         {
+            RestartTomorrow
+         }
+elseif (($days -gt $RestartDuration) -or ($days -eq $RestartDuration)) 
+{
+    RestartOneHour
+    Get-Date
+    start-sleep -Seconds 3300
+    $Exithour = 1
+    if ($Exithour -eq 1) {
+        Forcerestart
+        start-sleep -Seconds 5
+        #Restart-Computer -Force
+    }
+}
