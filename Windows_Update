@@ -1,38 +1,51 @@
+
+# Add host names to your winrm trusted host list:
+winrm set winrm/config/client ‘@{TrustedHosts="Cell-1"}'
+
+# The following command will install all available updates (you can enter more than one computer name)
+Invoke-WUJob -Script {ipmo PSWindowsUpdate; Get-WindowsUpdate -Install -AcceptAll | Out-File C:\Windows\PSWindowsUpdate.log } -Confirm:$false -Verbose –RunNow
+-ComputerName Cell-2
+
+############
+
 wusa.exe <file path> /quiet /norestart
-# /quiet = runs without user interaction. The computer restarts if this is required.
-# /uninstall = use with update title or KB number (wusa.exe /uninstall /KB5009454)
 
 ################
 
-# Security intelligence updates for Microsoft Defender Antivirus and other Microsoft antimalware
 cd '.\Program Files\Windows Defender'
 .\MpCmdRun.exe -removedefinitions -dynamicsignatures
 .\MpCmdRun.exe -SignatureUpdate
 
 ################
 
-# To start a remote PS session to another PC, enter the following:
-Enter-PSSession -ComputerName <PC_name> -Credential <username>
+Hide-WindowsUpdate -Title "Xerox - Extension*" -AcceptAll
 
-# If PC is set to block scripts, enter:
+################
+
+
+Enter-PSSession -ComputerName assembly -Credential fuller.admin
+
 Set-ExecutionPolicy RemoteSigned
 
-# PSWindowsUpdate is not installed by default on Windows. Run this to install the module:
-Install-Module PSWindowsUpdate -MaximumVersion 1.5.2.6
+Install-Module PSWindowsUpdate
 
 Import-Module PSWindowsUpdate
 
-# Show commands for PSWindowsUpdate:
-Get-Command -Module PSWindowsUpdate
-
 Add-WUServiceManager -MicrosoftUpdate
 
-# Install the updates:
 Install-WindowsUpdate -MicrosoftUpdate -AcceptAll
-# -AutoReboot
+# Access is denied. (Exception from HRESULT: 0x80070005 (E_ACCESSDENIED))
 
 
-######### MORE OPTIONS/TROUBLESHOOTING STEPS #########
+Download-WindowsUpdate
+# Access is denied. (Exception from HRESULT: 0x80070005 (E_ACCESSDENIED))
+
+
+Install-WindowsUpdate -AcceptAll
+# Access is denied. (Exception from HRESULT: 0x80070005 (E_ACCESSDENIED))
+
+
+######################
 
 
 # List and display the latest updates installed:
@@ -47,6 +60,13 @@ Import-Module PSWindowsUpdate
 # List needed updates:
 Get-WUlist
 
+# Install updates:
+Install-WindowsUpdate -AcceptAll
+# -AutoReboot
+
+# Reference:
+https://www.techulk.com/download-and-install-windows-updates-with-powershell/#Windows_Update_PowerShell_Module
+
 
 ####################################
 
@@ -54,10 +74,9 @@ Get-WUlist
 # Enable Windows Update service and switch to Automatic/Running (REMOTE PC):
 $Cred = Get-Credential -Credential fuller.admin
 $S = Get-Service -Name wuauserv
-    Invoke-Command -ComputerName cell-5 -Credential $Cred -ScriptBlock {
+Invoke-Command -ComputerName cell-5 -Credential $Cred -ScriptBlock {
     Set-Service -InputObject $S -StartupType Automatic -Status Running
-    }
-
+}
 
 # Enable Windows Update service and switch to Automatic/Running (LOCAL MACHINE):
 Set-Service -Name wuauserv -StartupType Automatic -Status Running
@@ -66,28 +85,48 @@ Set-Service -Name wuauserv -StartupType Automatic -Status Running
 Get-Service wuauserv | Select-Object -Property Name, StartType, Status
 
 
-##############
+
+
+# If returned with "Restricted", run:
+Set-ExecutionPolicy RemoteSigned
 
 
 # Install NuGet (install manager):
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.208 -Force
 
+# PSWindowsUpdate is not installed by default on Windows. Run this to install the module:
+Install-Module PSWindowsUpdate -MaximumVersion 1.5.2.6
 
-Invoke-WUInstall -ComputerName <PC_name> -Script {ipmo PSWindowsUpdate; Get-WUInstall -AcceptAll | Out-File C:\PSWindowsUpdate.log }
+
+# Show commands for PSWindowsUpdate:
+Get-Command -Module PSWindowsUpdate
 
 
-# Check the list of available updates on a remote computer:
-Get-WUList -ComputerName <PC_name>
+Invoke-WUInstall -ComputerName ENG-LTP-01 -Script {ipmo PSWindowsUpdate; Get-WUInstall -AcceptAll | Out-File C:\PSWindowsUpdate.log }
 
-# Previously installed updates list:
+
+# Check the list of available updates on a remote computer
+Get-WUList -ComputerName Test-PC
+
 Get-WUHistory
 
-# Download updates but don't install:
 Download-WindowsUpdate
 
 
 
+
+
+
+
 Get-CimInstance win32_service | Where-Object Name -eq wuauserv
+
+
+################################
+
+Get-Command -Module PSWindowsUpdate
+
+Install-WindowsUpdate
+
 
 
 
