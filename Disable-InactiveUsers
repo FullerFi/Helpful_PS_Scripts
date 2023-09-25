@@ -1,6 +1,3 @@
-
-
-
 $T = New-JobTrigger -Daily -At "11:30 PM" -DaysInterval 3
 Register-ScheduledJob -Name AD_Housekeeping -ScriptBlock {
 #Our parent OU#
