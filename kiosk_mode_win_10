@@ -15,5 +15,5 @@
 # If you need to disable Ctrl+Alt+Del
 
     Computer\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\System
-     ## the registry key "System" may not exist. In that situation just create       a new key called System.
+     ## the registry key "System" may not exist. In that situation just create a new key called System.
     "DisableTaskMgr "="1"</code></pre><figure class="wp-block-image size-large">
