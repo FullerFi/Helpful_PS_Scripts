@@ -1,5 +1,3 @@
-
-
 # Set the PowerShell variables
 $Global:RestartDuration = 5 #System reboots every 5 days
 $Global:OrganizationName = "WWW.VIVEKRR.COM"
