@@ -51,6 +51,13 @@ $btnExport.Text = "Export CSV"
 $btnExport.Enabled = $false
 $form.Controls.Add($btnExport)
 
+# Test button for debugging
+$btnTest = New-Object System.Windows.Forms.Button
+$btnTest.Location = New-Object System.Drawing.Point(730, 16)
+$btnTest.Size = New-Object System.Drawing.Size(50, 25)
+$btnTest.Text = "Test"
+$form.Controls.Add($btnTest)
+
 # Status label
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.Location = New-Object System.Drawing.Point(10, 50)
@@ -116,6 +123,56 @@ function Add-DebugOutput {
     $txtDebug.AppendText("[$timestamp] $Message`r`n")
     $txtDebug.ScrollToCaret()
     $form.Refresh()
+}
+
+# Test function to check basic functionality
+function Test-BasicFunctionality {
+    $txtDebug.Clear()
+    Add-DebugOutput "=== BASIC FUNCTIONALITY TEST ==="
+    
+    try {
+        # Test AD module
+        Import-Module ActiveDirectory -ErrorAction Stop
+        Add-DebugOutput "✓ ActiveDirectory module imported successfully"
+        
+        # Test getting domain controllers
+        $DCs = Get-ADDomainController -Filter * | Select-Object -ExpandProperty Name
+        Add-DebugOutput "✓ Found $($DCs.Count) Domain Controllers: $($DCs -join ', ')"
+        
+        # Test getting currently locked accounts
+        $lockedAccounts = Search-ADAccount -LockedOut -UsersOnly
+        Add-DebugOutput "✓ Found $($lockedAccounts.Count) currently locked accounts"
+        if ($lockedAccounts.Count -gt 0) {
+            $lockedAccounts | ForEach-Object { Add-DebugOutput "  - $($_.SamAccountName) ($($_.Name))" }
+        }
+        
+        # Test event log access on first DC
+        $firstDC = $DCs[0]
+        Add-DebugOutput "Testing event log access on $firstDC..."
+        
+        $recentEvents = Get-WinEvent -ComputerName $firstDC -FilterHashtable @{
+            LogName = 'Security'
+            ID = 4740
+            StartTime = (Get-Date).AddHours(-168)  # Last week
+        } -MaxEvents 10 -ErrorAction Stop
+        
+        Add-DebugOutput "✓ Found $($recentEvents.Count) recent lockout events on $firstDC"
+        
+        if ($recentEvents.Count -gt 0) {
+            Add-DebugOutput "Recent lockout events:"
+            $recentEvents | ForEach-Object {
+                $lockedUser = $_.Properties[0].Value
+                $callerComputer = $_.Properties[1].Value
+                Add-DebugOutput "  - $($_.TimeCreated): $lockedUser from $callerComputer"
+            }
+        }
+        
+    }
+    catch {
+        Add-DebugOutput "✗ ERROR: $($_.Exception.Message)"
+    }
+    
+    Add-DebugOutput "=== TEST COMPLETE ==="
 }
 
 # Search function
@@ -262,6 +319,7 @@ function Export-Results {
 # Event handlers
 $btnSearch.Add_Click({ Search-LockoutEvents })
 $btnExport.Add_Click({ Export-Results })
+$btnTest.Add_Click({ Test-BasicFunctionality })
 $txtUsername.Add_KeyDown({
     if ($_.KeyCode -eq "Enter") {
         Search-LockoutEvents
