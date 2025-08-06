@@ -17,26 +17,27 @@ $tabs.Size = New-Object System.Drawing.Size(780, 980)
 $tabs.Location = New-Object System.Drawing.Point(10, 10)
 
 
-#### --- TAB 1: ACCOUNT STATUS --- ####
+#### --- TAB 1: ACCOUNT STATUS --- #############################################################
 
 $tabStatus = New-Object System.Windows.Forms.TabPage
 $tabStatus.Text = "Account Status"
 
+# Input label
 $lblUser2 = New-Object System.Windows.Forms.Label
 $lblUser2.Text = "Username:"
 $lblUser2.Location = '10,20'
 $tabStatus.Controls.Add($lblUser2)
 
+# Input textbox
 $txtUser2 = New-Object System.Windows.Forms.TextBox
 $txtUser2.Location = '120,20'
 $txtUser2.Size = '200,20'
 $tabStatus.Controls.Add($txtUser2)
 
-
-# Output TextBox for results
+# Output TextBox
 $txtStatusOutput = New-Object System.Windows.Forms.TextBox
 $txtStatusOutput.Location = New-Object System.Drawing.Point(10,90)
-$txtStatusOutput.Size = New-Object System.Drawing.Size(740,380)
+$txtStatusOutput.Size = New-Object System.Drawing.Size(760,800)
 $txtStatusOutput.Multiline = $true
 $txtStatusOutput.ScrollBars = "Vertical"
 $txtStatusOutput.ReadOnly = $true
@@ -45,6 +46,7 @@ $txtStatusOutput.ForeColor = [System.Drawing.Color]::LightGreen
 $txtStatusOutput.Font = New-Object System.Drawing.Font("Consolas", 9)
 $tabStatus.Controls.Add($txtStatusOutput)
 
+# Search button
 $btnCheckStatus = New-Object System.Windows.Forms.Button
 $btnCheckStatus.Text = "Check"
 $btnCheckStatus.Location = '120,50'
@@ -78,7 +80,7 @@ $btnCheckStatus.Add_Click({
 })
 
 
-#### --- TAB 2: LOCKOUT INVESTIGATOR --- ####
+#### --- TAB 2: LOCKOUT INVESTIGATOR --- #######################################################################
 
 $tabLockout = New-Object System.Windows.Forms.TabPage
 $tabLockout.Text = "Lockout Investigator"
@@ -382,7 +384,7 @@ function Search-LockoutEvents {
 $btnSearch.Add_Click({ Search-LockoutEvents })
 
 
-#### --- TAB 3: CRED CHECKER --- ####
+#### --- TAB 3: CRED CHECKER --- ######################################################################
 
 $tabCred = New-Object System.Windows.Forms.TabPage
 $tabCred.Text = "Cred Checker"
@@ -450,9 +452,114 @@ $loginButton.Add_Click({
     }
 })
 
+#### --- TAB 4: Group Policy & Permissions Checker --- #####################################################
+
+$tabGPO = New-Object System.Windows.Forms.TabPage
+$tabGPO.Text = "GPO & Permissions"
+
+# Group/User input label
+$lblGroupInput = New-Object System.Windows.Forms.Label
+$lblGroupInput.Text = "Group or Username:"
+$lblGroupInput.Location = New-Object System.Drawing.Point(10, 20)
+$lblGroupInput.Size = New-Object System.Drawing.Size(160, 20)
+$tabGPO.Controls.Add($lblGroupInput)
+
+# Input textbox
+$txtGroupInput = New-Object System.Windows.Forms.TextBox
+$txtGroupInput.Location = New-Object System.Drawing.Point(200, 20)
+$txtGroupInput.Size = New-Object System.Drawing.Size(200, 20)
+$tabGPO.Controls.Add($txtGroupInput)
+
+# Search button
+$btnGroupSearch = New-Object System.Windows.Forms.Button
+$btnGroupSearch.Text = "Search"
+$btnGroupSearch.Location = New-Object System.Drawing.Point(200, 50)
+$btnGroupSearch.Size = New-Object System.Drawing.Size(80, 25)
+$tabGPO.Controls.Add($btnGroupSearch)
+
+# Output box
+$txtGroupOutput = New-Object System.Windows.Forms.TextBox
+$txtGroupOutput.Location = New-Object System.Drawing.Point(10, 90)
+$txtGroupOutput.Size = New-Object System.Drawing.Size(760, 800)
+$txtGroupOutput.Multiline = $true
+$txtGroupOutput.ScrollBars = "Vertical"
+$txtGroupOutput.ReadOnly = $true
+$txtGroupOutput.BackColor = [System.Drawing.Color]::Black
+$txtGroupOutput.ForeColor = [System.Drawing.Color]::LightGreen
+$txtGroupOutput.Font = New-Object System.Drawing.Font("Consolas", 9)
+$tabGPO.Controls.Add($txtGroupOutput)
+
+# Search logic
+$btnGroupSearch.Add_Click({
+    $inputName = $txtGroupInput.Text.Trim()
+    $txtGroupOutput.Clear()
+
+    if ([string]::IsNullOrEmpty($inputName)) {
+        $txtGroupOutput.Text = "Please enter a group or username."
+        return
+    }
+
+    try {
+        # Try to get group
+        $group = Get-ADGroup -Identity $inputName -ErrorAction SilentlyContinue
+        $user = Get-ADUser -Identity $inputName -ErrorAction SilentlyContinue
+
+        if ($group) {
+            $txtGroupOutput.AppendText("=== Group Membership ===`r`n")
+            $members = Get-ADGroupMember -Identity $inputName | Select-Object Name, SamAccountName, ObjectClass
+            foreach ($member in $members) {
+                $txtGroupOutput.AppendText("Name: $($member.Name), SAM: $($member.SamAccountName), Type: $($member.ObjectClass)`r`n")
+            }
+        }
+
+        if ($group -or $user) {
+            $txtGroupOutput.AppendText("`r`n=== Linked Group Policies ===`r`n")
+            $GPOs = Get-GPO -All | Where-Object {
+                ($_ | Get-GPOReport -ReportType Xml) -match $inputName
+            }
+            foreach ($gpo in $GPOs) {
+                $txtGroupOutput.AppendText("GPO: $($gpo.DisplayName), ID: $($gpo.Id)`r`n")
+            }
+
+            $txtGroupOutput.AppendText("`r`n=== Delegated Permissions on OUs ===`r`n")
+            $OUs = Get-ADOrganizationalUnit -Filter *
+            foreach ($OU in $OUs) {
+                $ACLs = Get-Acl -Path ("AD:\" + $OU.DistinguishedName)
+                foreach ($ACE in $ACLs.Access) {
+                    if ($ACE.IdentityReference -match $inputName) {
+                        $txtGroupOutput.AppendText("OU: $($OU.Name)`r`n")
+                        $txtGroupOutput.AppendText("Permission: $($ACE.AccessControlType) - $($ACE.ActiveDirectoryRights)`r`n")
+                    }
+                }
+            }
+
+            $txtGroupOutput.AppendText("`r`n=== ACLs on Shared Resources ===`r`n")
+            $Shares = Get-SmbShare | Where-Object {$_.Name -notlike "IPC$"}
+            foreach ($Share in $Shares) {
+                $Path = $Share.Path
+                if (Test-Path $Path) {
+                    $ACL = Get-Acl -Path $Path
+                    foreach ($ACE in $ACL.Access) {
+                        if ($ACE.IdentityReference -match $inputName) {
+                            $txtGroupOutput.AppendText("Share: $($Share.Name)`r`n")
+                            $txtGroupOutput.AppendText("Path: $Path`r`n")
+                            $txtGroupOutput.AppendText("Permission: $($ACE.FileSystemRights)`r`n")
+                        }
+                    }
+                }
+            }
+        } else {
+            $txtGroupOutput.Text = "No group or user found with the name '$inputName'."
+        }
+    }
+    catch {
+        $txtGroupOutput.Text = "Error: $($_.Exception.Message)"
+    }
+})
+
 
 # Add tabs
-$tabs.TabPages.AddRange(@($tabStatus, $tabLockout, $tabCred))
+$tabs.TabPages.AddRange(@($tabStatus, $tabLockout, $tabCred, $tabGPO))
 $form.Controls.Add($tabs)
 
 # Show the form
